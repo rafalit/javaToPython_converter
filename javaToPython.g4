@@ -1,199 +1,123 @@
 grammar javaToPython;
 
-start: (statement)* EOF;
+start               : (class_declaration | function_declaration | statement)* EOF;
 
-statement: identifierDec SEMICOLON
-	| statement_condition
-	| statement_for
-	| statement_while
-	| methodDec
-	| methodCall SEMICOLON
-	| operacjeMatematyczne
-	| statement_print SEMICOLON
-	| statement_println SEMICOLON;
+class_declaration  : 'public' 'class' IDENTIFIER '{' (class_member)* '}' ;
+class_member       : function_declaration | attribute_declaration;
 
-statement_print : PRINT L_PAREN inPrint R_PAREN;
+function_declaration : 'public' 'static' (VOID | type_) IDENTIFIER '(' parameter_list? ')' ':' block;
 
-statement_println : PRINTLN L_PAREN inPrint R_PAREN;
+attribute_declaration : IDENTIFIER '=' expression;
 
-inPrint: value (twoArgumentExpression value)*;
+parameter_list     : parameter (',' parameter)*;
+parameter          : (VOID | type_) IDENTIFIER;
 
-operacjeMatematyczne: identifierDec
-	| incrementOperation SEMICOLON
-	| decrementOperation SEMICOLON;
+block              : INDENT statement* DEDENT;
 
-identifierDec:
-	(identifierType) ID (ASSIGN identifierInitializer)?
-	| (identifierType)? ID (ASSIGN identifierInitializer);
+statement          : expression
+                   | assignment
+                   | conditional
+                   | loop
+                   | return_statement
+                   | print_statement
+                   | COMMENT
+                   | try_catch_statement
+                   | with_statement
+                   | break_statement
+                   | continue_statement
+                   | pass_statement
+                   | import_statement
+                   | function_call_statement;
 
-identifierInitializer:
-	minusOperator? expression;
+expression         : term ((PLUS | MINUS | MULTIPLY | DIVIDE | EQUAL | NOTEQUAL | LESS | LESSOREQ | MORE_ | MOREOREQ | OR | AND) term)*;
 
-statement_condition : statement_if
-	| statement_elseif
-	| statement_else;
+term               : IDENTIFIER
+                   | NUMBER
+                   | STRING
+                   | '(' expression ')'
+                   | function_call;
 
+assignment         : IDENTIFIER ASSIGN expression;
 
-statement_if: 	IF L_PAREN conditions R_PAREN block;
+conditional        : 'if' expression ':' block ('elif' expression ':' block)* ('else' ':' block)?;
 
-statement_elseif: ELSEIF L_PAREN conditions R_PAREN block;
+loop               : 'for' IDENTIFIER 'in' expression ':' block
+                   | 'while' expression ':' block;
 
-statement_else: ELSE block;
+return_statement   : 'return' expression;
 
-block: 	L_BRACE statement* R_BRACE;
+print_statement    : 'print' '(' expression ')';
 
-block_function: L_BRACE statement* (statement_return SEMICOLON)? R_BRACE;
+function_call_statement : function_call SEMICOLON; // Produkcja dla wywołania funkcji;
 
-compare: GT
-	| LT
-	| EQ
-	| GT_EQ
-	| LT_EQ
-	| NEQ;
+function_call      : IDENTIFIER '(' argument_list? ')';
 
+argument_list      : expression (',' expression)*;
 
+try_catch_statement : 'try' ':' block 'except' IDENTIFIER ':' block
+                   | 'try' ':' block 'except' IDENTIFIER 'as' IDENTIFIER ':' block;
 
-conditions: condition (condOp condition)*;
-condition: expression compare expression
-	| NOT toNot
-	| boolean_val
-	| ID
-	| minusOperator condition;
+break_statement    : 'break';
 
-condOp: orOperation
-	| andOperation;
+continue_statement : 'continue';
 
-toNot: L_PAREN condition R_PAREN
-    | boolean_val
-    | ID;
+pass_statement     : 'pass';
 
-orOperation: OR;
-andOperation: AND;
+import_statement   : 'import' IDENTIFIER (DOT IDENTIFIER)*;
 
-statement_for:	FOR L_PAREN assignment SEMICOLON expression_for SEMICOLON oneArgumentExpressionFor R_PAREN block;
+with_statement     : 'with' with_item (',' with_item)* ':' block;
 
-expression_for: expression compare expression;
-
-statement_while: WHILE L_PAREN conditions R_PAREN block;
-statement_return: RETURN expression;
-
-assignment: (identifierType)? ID ASSIGN identifierInitializer ;
-
-
-methodDec: 	methodType ID L_PAREN params? R_PAREN block_function;
-
-params:		identifierType ID (COMMA identifierType ID)*;
-
-methodCall: 	ID L_PAREN expression (COMMA expression)* R_PAREN;
-
-
-minusOperator: MINUS;
-
-oneArgumentExpressionFor: incrementOperationFor | decrementOperationFor;
-incrementOperationFor: INCR ID | ID INCR;
-decrementOperationFor: DECR ID | ID DECR;
-
-oneArgumentExpression: incrementOperation | decrementOperation | notOperation;
-twoArgumentExpression: MUL | DIV | PLUS | MOD | GT | LT | EQ | GT_EQ | LT_EQ;
-incrementOperation: INCR ID | ID INCR;
-decrementOperation: DECR ID | ID DECR;
-notOperation: NOT ID;
-
-expression: L_PAREN expression R_PAREN
-	| value
-	| ID (L_BRACKET expression R_BRACKET)*
-	| oneArgumentExpression
-	| minusOperator expression
-	| methodCall
-	| expression (twoArgumentExpression|MINUS) expression ((twoArgumentExpression|MINUS) expression)*;
-
-value: 	INT_VAL
-	| FLOAT_VAL
-	| STRING_VAL
-	| CHAR_VAL
-	| boolean_val
-	| ID;
-
-identifierType: BOOLEAN
-		| INT
-		| FLOAT
-		| CHAR
-		| STRING;
-
-methodType:	BOOLEAN
-		| INT
-		| FLOAT
-		| VOID
-		| STRING
-		| CHAR;
-
-boolean_val : TRUE | FALSE;
-
+with_item          : expression ('as' IDENTIFIER)?;
 
 //tokeny
-
-WHITESPACE:         (' ' | '\t' | '\r' | '\n') -> skip ;
-PLUS		:	'+';
-MINUS		:	'-';
-MUL		:	'*';
-DIV		:	'/';
-MOD		:	'%';
-ASSIGN		:	'=';
-
-GT		:	'>';
-LT		:	'<';
-EQ		:	'==';
-GT_EQ		:	'>=';
-LT_EQ		:	'<=';
-NEQ		:	'!=';
-
-AND		:	'&&';
-OR		:	'||';
-NOT		:	'!';
-
-INCR		:	'++';
-DECR		:	'--';
-
-L_PAREN		:	'(';
-R_PAREN		:	')';
-L_BRACKET	:	'[';
-R_BRACKET	:	']';
-L_BRACE		:	'{';
-R_BRACE		:	'}';
+IDENTIFIER         : [a-zA-Z_][a-zA-Z0-9_]*;
+NUMBER             : '-'? ( '0' | [1-9][0-9]* ) ( '.' [0-9]+ )?;
 
 
-SEMICOLON	:	';';
-COMMA		:	',';
-DOT		:	'.';
-QUOTE1		:	'\'';
-QUOTE2		:	'"';
+VOID               : 'void';
+INT                : 'int';
+FLOAT              : 'float';
+STRING             : 'string';
+BOOLEAN            : 'boolean';
+type_              : INT | FLOAT | STRING | BOOLEAN;
+
+PUBLIC             : 'public';
+CLASS              : 'class';
+FOR                : 'for';
+IF                 : 'if';
+ELSE               : 'else';
+WHILE              : 'while';
+BREAK              : 'break';
+RETURN             : 'return';
+TRY                : 'try';
+CATCH              : 'catch';
+IMPORT             : 'import';
 
 
+PLUS               : '+';
+MINUS              : '-';
+MULTIPLY           : '*';
+DIVIDE             : '/';
+ASSIGN             : '=';
+EQUAL              : '==';
+NOTEQUAL           : '!=';
+LESS               : '<';
+LESSOREQ           : '<=';
+MORE_              : '>';
+MOREOREQ           : '>=';
+OR                 : '||';
+AND                : '&&';
 
-FOR		:	'for';
-WHILE		:	'while';
-IF		: 	'if';
-ELSE		:	'else';
-ELSEIF		:	'else if';
-BREAK		:	'break';
-FUNCTION	: 	'function';
-RETURN		: 	'return';
+SEMICOLON          : ';';
+LEFTPAREN          : '(';
+RIGHTPAREN         : ')';
+LEFTBRACKET        : '[';
+RIGHTBRACKET       : ']';
+LEFTBRACE          : '{';
+RIGHTBRACE         : '}';
 
-VOID		: 	'void';
-INT		:       'int';
-FLOAT		:	'float';
-CHAR		:	'char';
-STRING		: 	'string';
-BOOLEAN		:	'boolean';
+COMMENT            : ('//' ~('\n' | '\r')* '\n'?  | '/*' .*? '*/') -> skip;
+NEWLINE            : '\n';
+WHITESPACE         : (' ' | '\t' | '\r' | '\n') -> skip ;
 
-
-TRUE		:    	'true';
-FALSE		:   	'false';
-
-ID		:	[a-zA-Z] [a-zA-Z0-9_]*;
-INT_VAL		: 	[0-9]+;
-FLOAT_VAL	:	[0-9]+'.'[0-9]+;
-STRING_VAL :  	 '"' (~["])* '"';
-CHAR_VAL	:	  '\'' (~[']) '\'';
-PRINT : 'System.out.print';
-PRINTLN : 'System.out.println';
+ERROR              : . -> skip;
