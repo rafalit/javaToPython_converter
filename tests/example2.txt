@@ -1,0 +1,7 @@
+public class MyClass {
+    public void iterate() {
+        for (int j = 0; j < 5; i++) {
+            System.out.println("Iteration: " + j);
+        }
+    }
+}
