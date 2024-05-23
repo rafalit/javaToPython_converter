@@ -1,6 +1,6 @@
 public class MyClass {
     public void iterate() {
-        for (int j = 0; j < 5; i++) {
+        for (int j = 0; j < 5; j++) {
             System.out.println("Iteration: " + j);
         }
     }

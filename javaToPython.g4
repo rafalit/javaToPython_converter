@@ -1,167 +1,180 @@
 grammar javaToPython;
 
-source           : (import_stmt)* decl+;
+start           : (import_statement)* declaration+;
 
-import_stmt      : INCLUDE Identifier (PERIOD Identifier)* TERMINATE;
+import_statement    : IMPORT IDENTIFIER (DOT IDENTIFIER)* SEMICOLON;
 
-// Data Types and Literals
-data_type        : INTEGER_T | DOUBLE_T | CHAR_T | BOOLEAN_T | Identifier;
-type_def         : VOID_T | data_type;
-literal_value    : NUMERIC_L | STRING_L | TRUE_L | FALSE_L | NULL_L;
-params_list      : param (COMMA param)*;
-param            : data_type (LBRACKET RBRACKET)? Identifier;
-args_list        : arg (COMMA arg)*;
-arg              : literal_value | Identifier;
 
-// Class and Enum Declarations
-decl             : access_modifier? (class_decl | enum_decl);
-access_modifier  : PUBLIC_MOD | PRIVATE_MOD | PROTECTED_MOD;
+//Data Types and Literals
+data_type           : INT | FLOAT | STRING | BOOLEAN | IDENTIFIER;
+type                : VOID | data_type;
+literal             : NUMBER | TEXT | TRUE | FALSE | NULL;
+parameter_list      : parameter (COMMA parameter)*;
+parameter           : data_type (LEFTBRACKET RIGHTBRACKET)? IDENTIFIER;
+argument_list       : argument (COMMA argument)*;
+argument            : literal | IDENTIFIER;
 
-class_decl       : CLASS_KW Identifier LBRACE class_body RBRACE;
-class_body       : (field_decl | method_decl | constructor_decl | enum_decl)*;
 
-enum_decl        : ENUM_KW Identifier LBRACE enum_body RBRACE;
-enum_body        : Identifier (COMMA Identifier)*;
+//Class and Enum Declarations
+declaration         : access? (class_declaration | enum_declaration);
+access              : PUBLIC | PRIVATE | PROTECTED;
 
-field_decl       : access_modifier? STATIC_MOD? data_type Identifier (ASSIGNMENT_OP literal_value)? TERMINATE;
-method_decl      : access_modifier? STATIC_MOD? type_def Identifier LPAR params_list? RPAR block_stmt;
-constructor_decl : access_modifier? Identifier LPAR params_list? RPAR block_stmt;
+class_declaration   : CLASS IDENTIFIER LEFTBRACE class_body RIGHTBRACE;
+class_body          : (field_declaration | method_declaration | constructor | enum_declaration)*;
 
-class_instance   : NEW_KW Identifier LPAR args_list? RPAR;
-enum_instance    : Identifier PERIOD Identifier;
+enum_declaration    : ENUM IDENTIFIER LEFTBRACE enum_body RIGHTBRACE;
+enum_body           : IDENTIFIER (COMMA IDENTIFIER)*;
 
-// Blocks and Statements
-block_stmt       : LBRACE (stmt | block_stmt_item)* RBRACE;
+field_declaration   : access? STATIC? data_type IDENTIFIER (ASSIGN literal)? SEMICOLON;
+method_declaration  : access? STATIC? type IDENTIFIER LEFTPAREN parameter_list? RIGHTPAREN block;
+constructor         : access? IDENTIFIER LEFTPAREN parameter_list? RIGHTPAREN block;
 
-stmt             : local_var_decl TERMINATE
-                 | assignment_stmt TERMINATE
-                 | print_stmt TERMINATE
-                 | return_stmt TERMINATE
-                 | break_stmt TERMINATE
-                 | continue_stmt TERMINATE
-                 | function_call_stmt TERMINATE
-                 | if_stmt
-                 | while_stmt
-                 | for_stmt
-                 | switch_case_stmt
-                 | try_catch_stmt;
+class_object        : NEW IDENTIFIER LEFTPAREN argument_list? RIGHTPAREN;
+enum_object         : IDENTIFIER DOT IDENTIFIER;
 
-block_stmt_item  : stmt;
 
-local_var_decl   : data_type Identifier (LBRACKET RBRACKET)?;
-assignment_stmt  : (THIS_REF PERIOD)? Identifier ASSIGNMENT_OP (literal_value | Identifier | arith_expr | class_instance | enum_instance);
+//Blocks and Statements
+block               : LEFTBRACE (statement SEMICOLON | block_statement)* RIGHTBRACE;
 
-// Expressions
-expression       : logical_expr | arith_expr;
+statement           : local_variable
+                    | assignment
+                    | print_statement
+                    | return_statement
+                    | break_statement
+                    | continue_statement
+                    | function_call;
 
-logical_expr     : logical_term (logical_op logical_term)*;
-logical_term     : NOT_OP? (LPAR logical_expr RPAR | Identifier | literal_value | arith_expr);
-logical_op       : OR_OP | AND_OP;
+block_statement     : if_statement
+                    | switch_case_statement
+                    | loop_statement
+                    | try_catch_statement;
 
-arith_expr       : arith_term (arith_op arith_term)*;
-arith_term       : LPAR arith_expr RPAR | Identifier | literal_value;
-arith_op         : PLUS_OP | MINUS_OP | MULT_OP | DIV_OP | compare_op;
+local_variable      : data_type IDENTIFIER (LEFTBRACKET RIGHTBRACKET)?;
+assignment          : data_type? (THIS DOT)? IDENTIFIER ASSIGN (literal | IDENTIFIER
+                    | arithmetic_expression | class_object | enum_object);
 
-compare_op       : LT_OP | LTE_OP | GT_OP | GTE_OP | EQ_OP | NEQ_OP;
 
-// Control Flow Statements
-if_stmt          : IF_KW LPAR expression RPAR block_stmt (else_stmt)?;
-else_stmt        : ELSE_KW block_stmt;
+//Expressions
+expression          : logical_expression | arithmetic_expression;
 
-switch_case_stmt : SWITCH_KW LPAR Identifier RPAR LBRACE switch_block RBRACE;
-switch_block     : (switch_case)* default_case;
-switch_case      : CASE_KW (Identifier | STRING_L) COLON (stmt)+;
-default_case     : DEFAULT_KW COLON (stmt)+;
+logical_expression  : logical_term (logical_operator logical_term)*;
+logical_term        : NOT? (LEFTPAREN logical_expression RIGHTPAREN | IDENTIFIER | literal | arithmetic_expression);
+logical_operator    : OR | AND;
 
-loop_stmt        : for_stmt | while_stmt;
+arithmetic_expression : arithmetic_term (arithmetic_operator arithmetic_term)*;
+arithmetic_term     : LEFTPAREN arithmetic_expression RIGHTPAREN | literal | IDENTIFIER | arithmetic_operation;
+arithmetic_operator : PLUS | MINUS | MULTIPLY | DIVIDE | compare_operator;
 
-for_stmt         : FOR_KW LPAR local_var_decl TERMINATE expression TERMINATE assignment_stmt RPAR block_stmt;
+arithmetic_operation: IDENTIFIER arithmetic_operator literal | arithmetic_operation arithmetic_operator literal;
 
-while_stmt       : WHILE_KW LPAR expression RPAR block_stmt;
+compare_operator    : LESSTHAN | LESSOREQ | MORETHAN | MOREOREQ | EQUAL | NOTEQUAL;
 
-try_catch_stmt   : TRY_KW block_stmt (catch_clause)+;
-catch_clause     : CATCH_KW LPAR data_type Identifier RPAR block_stmt;
 
-// Other Statements
-print_stmt       : (PRINT_OP | PRINTLN_OP) LPAR print_arg RPAR;
-print_arg        : STRING_L (PLUS_OP (Identifier | LPAR expression RPAR))?
-                 | Identifier (COMMA Identifier)*
-                 | expression;
+//Control Flow Statements
+if_statement        : IF LEFTPAREN expression RIGHTPAREN block (else_statement)*;
+else_statement      : ELSE if_statement;
 
-return_stmt      : RETURN_KW (expression)?;
-break_stmt       : BREAK_KW;
-continue_stmt    : CONTINUE_KW;
+switch_case_statement : SWITCH LEFTPAREN IDENTIFIER RIGHTPAREN LEFTBRACE switch_block RIGHTBRACE;
+switch_block        : (switch_case)* default_case;
+switch_case         : CASE (IDENTIFIER | TEXT) COLON (statement SEMICOLON)+;
+default_case        : DEFAULT COLON (statement SEMICOLON)+;
 
-function_call_stmt : (Identifier PERIOD)? Identifier LPAR args_list? RPAR;
+loop_statement      : for_statement | while_statement;
 
-// Keywords and Types
-VOID_T: 'void';
-INTEGER_T: 'int';
-DOUBLE_T: 'float';
-CHAR_T: 'String';
-BOOLEAN_T: 'boolean';
+for_statement       : FOR LEFTPAREN assignment SEMICOLON for_condition SEMICOLON for_iteration RIGHTPAREN block;
+for_condition       : IDENTIFIER compare_operator (IDENTIFIER | NUMBER);
+for_iteration       : IDENTIFIER (INCREMENT | DECREMENT);
 
-CLASS_KW: 'class';
-ENUM_KW: 'enum';
-PUBLIC_MOD: 'public';
-PRIVATE_MOD: 'private';
-PROTECTED_MOD: 'protected';
-STATIC_MOD: 'static';
-NEW_KW: 'new';
-FOR_KW: 'for';
-IF_KW: 'if';
-ELSE_KW: 'else';
-WHILE_KW: 'while';
-BREAK_KW: 'break';
-SWITCH_KW: 'switch';
-CASE_KW: 'case';
-DEFAULT_KW: 'default';
-CONTINUE_KW: 'continue';
-RETURN_KW: 'return';
-TRY_KW: 'try';
-CATCH_KW: 'catch';
-INCLUDE: 'import';
-PRINT_OP: 'System.out.print';
-PRINTLN_OP: 'System.out.println';
+while_statement     : WHILE LEFTPAREN while_condition RIGHTPAREN block;
+while_condition     : for_condition | expression | IDENTIFIER | NUMBER | TRUE | FALSE;
 
-// Operators
-PLUS_OP: '+';
-MINUS_OP: '-';
-MULT_OP: '*';
-DIV_OP: '/';
-ASSIGNMENT_OP: '=';
-EQ_OP: '==';
-NEQ_OP: '!=';
-LT_OP: '<';
-LTE_OP: '<=';
-GT_OP: '>';
-GTE_OP: '>=';
-OR_OP: '||';
-AND_OP: '&&';
-NOT_OP: '!';
-INCR_OP: '++';
-DECR_OP: '--';
+try_catch_statement : TRY block (catch_statement)+;
+catch_statement     : CATCH LEFTPAREN data_type IDENTIFIER RIGHTPAREN block;
 
-// Delimiters
-TERMINATE: ';';
+
+//Other Statements
+print_statement     : (PRINT | PRINTLN) LEFTPAREN print_term RIGHTPAREN;
+print_term          : TEXT (PLUS (IDENTIFIER | LEFTPAREN expression RIGHTPAREN))?
+                    | IDENTIFIER (COMMA IDENTIFIER)*
+                    | expression;
+
+return_statement    : RETURN (IDENTIFIER | literal | arithmetic_expression) SEMICOLON?;
+break_statement     : BREAK;
+continue_statement  : CONTINUE;
+
+function_call       : (IDENTIFIER DOT)? IDENTIFIER LEFTPAREN argument_list? RIGHTPAREN;
+
+
+
+// type
+VOID: 'void';
+INT: 'int';
+FLOAT: 'float';
+STRING: 'String';
+BOOLEAN: 'boolean';
+
+// keyword
+CLASS: 'class';
+ENUM: 'enum';
+PUBLIC: 'public';
+PRIVATE: 'private';
+PROTECTED: 'protected';
+STATIC: 'static';
+NEW: 'new';
+FOR: 'for';
+IF: 'if';
+ELSE: 'else';
+WHILE: 'while';
+BREAK: 'break';
+SWITCH: 'switch';
+CASE: 'case';
+DEFAULT: 'default';
+CONTINUE: 'continue';
+RETURN: 'return';
+TRY: 'try';
+CATCH: 'catch';
+IMPORT: 'import';
+PRINT: 'System.out.print';
+PRINTLN: 'System.out.println';
+
+// operator
+PLUS: '+';
+MINUS: '-';
+MULTIPLY: '*';
+DIVIDE: '/';
+ASSIGN: '=';
+EQUAL: '==';
+NOTEQUAL: '!=';
+LESSTHAN: '<';
+LESSOREQ: '<=';
+MORETHAN: '>';
+MOREOREQ: '>=';
+OR: '||';
+AND: '&&';
+NOT: '!';
+INCREMENT: '++';
+DECREMENT: '--';
+
+// delimiter
+SEMICOLON: ';';
 COLON: ':';
-LPAR: '(';
-RPAR: ')';
-LBRACKET: '[';
-RBRACKET: ']';
-LBRACE: '{';
-RBRACE: '}';
+LEFTPAREN: '(';
+RIGHTPAREN: ')';
+LEFTBRACKET: '[';
+RIGHTBRACKET: ']';
+LEFTBRACE: '{';
+RIGHTBRACE: '}';
 COMMA: ',';
-PERIOD: '.';
+DOT: '.';
 
-// Literals
-NUMERIC_L: '-'? ( '0' | [1-9][0-9]* ) ( '.' [0-9]+ )?;
-STRING_L: '"' (.*?) '"';
-THIS_REF: 'this';
-NULL_L: 'null';
-TRUE_L: 'true';
-FALSE_L: 'false';
-Identifier: [a-zA-Z_][a-zA-Z0-9_]*;
+// literal
+NUMBER: '-'? ( '0' | [1-9][0-9]* ) ( '.' [0-9]+ )?;
+TEXT: '"' (.*?) '"';
+THIS: 'this';
+NULL: 'null';
+TRUE: 'true';
+FALSE: 'false';
+IDENTIFIER: [a-zA-Z_][a-zA-Z0-9_]*;
 
 COMMENT: ('//' ~('\n' | '\r')* '\n'?  | '/*' .*? '*/') -> skip;
 WHITESPACE: [ \t\r\n]+ -> skip;
