@@ -1,0 +1,14 @@
+public class MathUtils {
+    public static final double PI = 3.14159;
+
+    public static double square(double number) {
+        return number * number;
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("PI: " + MathUtils.PI);
+        System.out.println("Square of 5: " + MathUtils.square(5));
+    }
+}

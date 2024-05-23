@@ -1,0 +1,8 @@
+public class WhileLoopExample {
+    public void countDown(int n) {
+        while (n > 0) {
+            System.out.println("Countdown: " + n);
+            n--;
+        }
+    }
+}

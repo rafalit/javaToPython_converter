@@ -1,76 +1,68 @@
-import sys
-import os
-
 from antlr4 import *
 from javaToPythonLexer import javaToPythonLexer
 from javaToPythonParser import javaToPythonParser
 from javaToPythonListener import javaToPythonListener
 
-class JavaToPythonConverter(javaToPythonListener):
-    def __init__(self):
-        self.output = ""
-        self.indent = 0
 
-    def enterClass_declaration(self, ctx: javaToPythonParser.Class_declarationContext):
+class JavaInterpreter(javaToPythonListener):
+
+    def execute(self, source_code):
+        input_stream = InputStream(source_code)
+        lexer = javaToPythonLexer(input_stream)
+        token_stream = CommonTokenStream(lexer)
+        parser = javaToPythonParser(token_stream)
+        tree = parser.start()
+        self.result = ""
+        walker = ParseTreeWalker()
+        walker.walk(self, tree)
+        return self.result
+
+    def enterClass_declaration(self, ctx):
         class_name = ctx.IDENTIFIER().getText()
-        self.output += "class " + class_name + ":\n"
-        self.indent = 1
+        self.result += f"class {class_name}:\n"
 
-    def enterMethod_declaration(self, ctx:javaToPythonParser.Method_declarationContext):
+    def enterMethod_declaration(self, ctx):
         method_name = ctx.IDENTIFIER().getText()
-        parameters = ctx.parameter_list().getText() if ctx.parameter_list() else ""
-        if not parameters:  # Jeśli lista parametrów jest pusta
-            parameters = "self"  # Dodaj 'self' jako pierwszy parametr
-        self.output += "    " * self.indent + "def " + method_name + "(" + parameters + "):\n"
-        self.indent += 1
+        params = ctx.parameter_list().getText() if ctx.parameter_list() else ""
+        self.result += f"    def {method_name}({params}):\n"
+        self.result += "        "  # Add indentation for method body
 
-    def exitMethod_declaration(self, ctx:javaToPythonParser.Method_declarationContext):
-        self.indent -= 1
+    def enterFor_statement(self, ctx):
+        initialization = ctx.assignment().getText()
+        condition = ctx.for_condition().getText()
+        iteration = ctx.for_iteration().getText()
+        block = ctx.block().getText()
+        self.result += f"    for {initialization}; {condition}; {iteration}:\n"
+        self.result += f"        {block}\n"
 
-    def enterFor_statement(self, ctx: javaToPythonParser.For_statementContext):
-        assignment_text = ctx.assignment().getText() if ctx.assignment() else ""
-        assignment = assignment_text[assignment_text.index("int") + len("int"):] if "int" in assignment_text else ""
-        condition = ctx.for_condition().getText().split('<')[1].strip()
-        self.output += "    " * self.indent + f"for {assignment[0]} in range({condition}):\n"
-        self.indent += 1
-
-    def exitFor_statement(self, ctx: javaToPythonParser.For_statementContext):
-        self.indent -= 1
-
-    def enterPrint_statement(self, ctx: javaToPythonParser.Print_statementContext):
+    def enterPrint_statement(self, ctx):
         print_term = ctx.print_term().getText()
-        if 'i' in print_term:
-            print_term = print_term[:-1] + "str(" + print_term[-1] + ")"
-        self.output += "    " * self.indent + f"print({print_term})\n"
+        if "System.out.println" in print_term:
+            self.result += f"        {print_term};\n"
+        else:
+            self.result += f"        print({print_term})\n"
+
+    def enterField_declaration(self, ctx):
+        field_name = ctx.IDENTIFIER().getText()
+        assignment = ctx.ASSIGN().getText() if ctx.ASSIGN() else ""
+        expression = ctx.literal().getText() if ctx.literal() else ""
+        self.result += f"    {field_name} = {expression}\n"
+
+    def enterExpression(self, ctx):
+        expression = ctx.getText()
+        self.result += f"        return {expression}\n"  # Return the expression value
 
 
-def convert_java_to_python(java_file):
-    class_name = os.path.basename(java_file).replace(".txt", "")
-    output_file = os.path.join(os.path.dirname(java_file), class_name + ".py")
+if __name__ == '__main__':
+    source_code = """
+    public class First
+    {
+        int a = 2;
+        int b = 4;
+        int c = 89;
+    }
+    """
 
-    with open(java_file, "r") as file:
-        java_code = file.read()
-
-    input_stream = InputStream(java_code)
-    lexer = javaToPythonLexer(input_stream)
-    token_stream = CommonTokenStream(lexer)
-    parser = javaToPythonParser(token_stream)
-    tree = parser.start()
-    converter = JavaToPythonConverter()
-    walker = ParseTreeWalker()
-    walker.walk(converter, tree)
-
-    with open(output_file, "w") as file:
-        file.write(converter.output)
-
-    return output_file
-
-# Example usage:
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python javaToPythonExecute.py <java_file>")
-        sys.exit(1)
-
-    java_file = sys.argv[1]
-    python_file = convert_java_to_python(java_file)
-    print(f"Python code generated: {python_file}")
+    interpreter = JavaInterpreter()
+    python_code = interpreter.execute(source_code)
+    print(python_code)

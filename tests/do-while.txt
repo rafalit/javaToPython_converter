@@ -1,0 +1,8 @@
+public class DoWhileLoopExample {
+    public void countDown(int n) {
+        do {
+            System.out.println("Countdown: " + n);
+            n--;
+        } while (n > 0);
+    }
+}
