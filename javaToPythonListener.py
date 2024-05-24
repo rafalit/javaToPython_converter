@@ -1,4 +1,4 @@
-# Generated from C:/Users/szaro/PycharmProjects/abcdefg/javaToPython.g4 by ANTLR 4.13.1
+# Generated from C:/Users/szaro/PycharmProjects/JtP/javaToPython.g4 by ANTLR 4.13.1
 from antlr4 import *
 if "." in __name__:
     from .javaToPythonParser import javaToPythonParser
@@ -143,6 +143,24 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by javaToPythonParser#interface_declaration.
+    def enterInterface_declaration(self, ctx:javaToPythonParser.Interface_declarationContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#interface_declaration.
+    def exitInterface_declaration(self, ctx:javaToPythonParser.Interface_declarationContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#interface_body.
+    def enterInterface_body(self, ctx:javaToPythonParser.Interface_bodyContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#interface_body.
+    def exitInterface_body(self, ctx:javaToPythonParser.Interface_bodyContext):
+        pass
+
+
     # Enter a parse tree produced by javaToPythonParser#field_declaration.
     def enterField_declaration(self, ctx:javaToPythonParser.Field_declarationContext):
         pass
@@ -233,6 +251,15 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by javaToPythonParser#increment_decrement.
+    def enterIncrement_decrement(self, ctx:javaToPythonParser.Increment_decrementContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#increment_decrement.
+    def exitIncrement_decrement(self, ctx:javaToPythonParser.Increment_decrementContext):
+        pass
+
+
     # Enter a parse tree produced by javaToPythonParser#expression.
     def enterExpression(self, ctx:javaToPythonParser.ExpressionContext):
         pass
@@ -296,12 +323,39 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by javaToPythonParser#arithmetic_operation.
+    def enterArithmetic_operation(self, ctx:javaToPythonParser.Arithmetic_operationContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#arithmetic_operation.
+    def exitArithmetic_operation(self, ctx:javaToPythonParser.Arithmetic_operationContext):
+        pass
+
+
     # Enter a parse tree produced by javaToPythonParser#compare_operator.
     def enterCompare_operator(self, ctx:javaToPythonParser.Compare_operatorContext):
         pass
 
     # Exit a parse tree produced by javaToPythonParser#compare_operator.
     def exitCompare_operator(self, ctx:javaToPythonParser.Compare_operatorContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#method_signature.
+    def enterMethod_signature(self, ctx:javaToPythonParser.Method_signatureContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#method_signature.
+    def exitMethod_signature(self, ctx:javaToPythonParser.Method_signatureContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#annotation.
+    def enterAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#annotation.
+    def exitAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
         pass
 
 
@@ -329,15 +383,6 @@ class javaToPythonListener(ParseTreeListener):
 
     # Exit a parse tree produced by javaToPythonParser#switch_case_statement.
     def exitSwitch_case_statement(self, ctx:javaToPythonParser.Switch_case_statementContext):
-        pass
-
-
-    # Enter a parse tree produced by javaToPythonParser#switch_block.
-    def enterSwitch_block(self, ctx:javaToPythonParser.Switch_blockContext):
-        pass
-
-    # Exit a parse tree produced by javaToPythonParser#switch_block.
-    def exitSwitch_block(self, ctx:javaToPythonParser.Switch_blockContext):
         pass
 
 
@@ -413,6 +458,15 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by javaToPythonParser#do_while_statement.
+    def enterDo_while_statement(self, ctx:javaToPythonParser.Do_while_statementContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#do_while_statement.
+    def exitDo_while_statement(self, ctx:javaToPythonParser.Do_while_statementContext):
+        pass
+
+
     # Enter a parse tree produced by javaToPythonParser#try_catch_statement.
     def enterTry_catch_statement(self, ctx:javaToPythonParser.Try_catch_statementContext):
         pass
@@ -482,6 +536,15 @@ class javaToPythonListener(ParseTreeListener):
 
     # Exit a parse tree produced by javaToPythonParser#function_call.
     def exitFunction_call(self, ctx:javaToPythonParser.Function_callContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#primary_expression.
+    def enterPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#primary_expression.
+    def exitPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
         pass
 
 

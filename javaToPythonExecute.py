@@ -1,242 +1,115 @@
 from antlr4 import *
-import sys
 from javaToPythonLexer import javaToPythonLexer
 from javaToPythonParser import javaToPythonParser
 from javaToPythonVisitor import javaToPythonVisitor
 
-
 class JavaToPythonConverter(javaToPythonVisitor):
     def __init__(self):
-        super().__init__()
+        self.indentation_level = 0
+        self.output = ""
 
-    # Konwersja węzła literal
-    def visitLiteral(self, ctx):
-        if ctx.NUMBER():
-            return float(ctx.NUMBER().getText()) if '.' in ctx.NUMBER().getText() else int(ctx.NUMBER().getText())
-        elif ctx.TEXT():
-            return ctx.TEXT().getText()[1:-1]  # Usunięcie cudzysłowów
-        elif ctx.TRUE():
-            return True
-        elif ctx.FALSE():
-            return False
-        elif ctx.NULL():
-            return None
+    def increase_indentation(self):
+        self.indentation_level += 1
 
-    # Konwersja węzła type
-    def visitType(self, ctx):
-        if ctx.VOID():
-            return ''  # Zwróć pusty łańcuch znaków
-        else:
-            return self.visitChildren(ctx)[0]  # Konwertuj pierwsze dziecko (data_type)
+    def decrease_indentation(self):
+        self.indentation_level -= 1
 
-    # Konwersja węzła data_type
-    def visitData_type(self, ctx):
-        if ctx.INT():
-            return 'int'
-        elif ctx.FLOAT():
-            return 'float'
-        elif ctx.STRING():
-            return 'str'
-        elif ctx.BOOLEAN():
-            return 'bool'
-        elif ctx.IDENTIFIER():
-            return ctx.IDENTIFIER().getText()
+    def get_indentation(self):
+        return "    " * self.indentation_level
 
-    # Konwersja deklaracji
-    def visitDeclaration(self, ctx):
-        if ctx.class_declaration():
-            return self.visitClass_declaration(ctx.class_declaration())
-        elif ctx.enum_declaration():
-            return self.visitEnum_declaration(ctx.enum_declaration())
+    def visitClass_declaration(self, ctx: javaToPythonParser.Class_declarationContext):
+        class_name_tokens = ctx.IDENTIFIER()
+        class_name = "".join([token.getText() for token in class_name_tokens])
+        class_body = self.visit(ctx.class_body())
+        self.output += f"class {class_name}:\n{class_body}\n"
+        return self.output
 
-    def visitClass_declaration(self, ctx):
-        class_name = ctx.IDENTIFIER().getText()
-        body = self.visitClass_body(ctx.class_body())
-        return f"class {class_name}:\n{body}"
+    def visitClass_body(self, ctx: javaToPythonParser.Class_bodyContext):
+        body = ""
+        self.increase_indentation()
+        for child in ctx.children:
+            if isinstance(child, javaToPythonParser.Field_declarationContext):
+                body += self.visit(child)
+            elif isinstance(child, javaToPythonParser.Method_declarationContext):
+                body += self.visit(child)
+        self.decrease_indentation()
+        return body
 
-    # Konwersja ciała klasy
-    def visitClass_body(self, ctx):
-        body = []
-        for field_declaration in ctx.field_declaration():
-            result = self.visit(field_declaration)
-            if result:
-                body.append(result)
-        for method_declaration in ctx.method_declaration():
-            result = self.visit(method_declaration)
-            if result:
-                body.append(result)
-        for constructor in ctx.constructor():
-            result = self.visit(constructor)
-            if result:
-                body.append(result)
-        for enum_declaration in ctx.enum_declaration():
-            result = self.visit(enum_declaration)
-            if result:
-                body.append(result)
-        return '\n'.join(body)
-
-    # Konwersja deklaracji pola
-    def visitField_declaration(self, ctx):
-        field_type = self.visit(ctx.data_type())
+    def visitField_declaration(self, ctx: javaToPythonParser.Field_declarationContext):
         field_name = ctx.IDENTIFIER().getText()
-        field_initializer = self.visit(ctx.literal()) if ctx.literal() else None
-        if field_initializer is not None:
-            return f"{field_name} = {field_initializer}"
-        else:
-            return f"{field_name}: {field_type}"
+        return f"{self.get_indentation()}{field_name} = 0\n"
 
-    # Metoda konwersji deklaracji metody
-    def visitMethod_declaration(self, ctx):
-        method_type = self.visit(ctx.type_())  # Konwersja typu zwracanego przez metodę
+    def visitMethod_declaration(self, ctx: javaToPythonParser.Method_declarationContext):
         method_name = ctx.IDENTIFIER().getText()
-        parameters = ", ".join(param.getText() for param in ctx.parameter_list().parameter())
-        method_body = self.visitMethod_body(ctx.block())
-        return f"def {method_name}({parameters}){method_type}:\n{method_body}"
+        parameters = self.visit(ctx.parameter_list())
+        method_body = self.visit(ctx.block())
+        return f"{self.get_indentation()}def {method_name}({parameters}):\n{method_body}\n"
 
-    # Konwersja wywołania funkcji
-    def visitFunction_call(self, ctx):
-        function_name = ctx.IDENTIFIER().getText()  # Pobierz nazwę funkcji
-        arguments = [self.visit(arg) for arg in ctx.argument_list().expression()]  # Konwertuj argumenty
-        arguments_str = ', '.join(arguments)  # Konwertuj argumenty na łańcuch znaków oddzielonych przecinkami
-        return f"{function_name}({arguments_str})"
+    def visitParameter_list(self, ctx: javaToPythonParser.Parameter_listContext):
+        parameters = [self.visit(parameter) for parameter in ctx.parameter()]
+        return ", ".join(parameters)
 
-    # Konwersja deklaracji lokalnej zmiennej
-    def visitLocal_variable(self, ctx):
-        data_type = self.visit(ctx.data_type())  # Pobierz typ zmiennej
-        variable_name = ctx.IDENTIFIER().getText()  # Pobierz nazwę zmiennej
+    def visitParameter(self, ctx: javaToPythonParser.ParameterContext):
+        parameter_name = ctx.IDENTIFIER().getText()
+        return parameter_name
 
-        # Sprawdź, czy zmienna ma tablicę
-        if ctx.LEFTBRACKET() is not None and ctx.RIGHTBRACKET() is not None:
-            return f"{data_type}[] {variable_name}"
-        else:
-            return f"{data_type} {variable_name}"
-
-    # Konwersja deklaratora zmiennej
-    def visitVariable_declarator(self, ctx):
-        variable_name = ctx.IDENTIFIER().getText()
-        variable_initializer = self.visit(ctx.variableInitializer())
-        if variable_initializer:
-            return f"{variable_name} = {variable_initializer}"
-        else:
-            return variable_name
-
-    # Konwersja deklaracji enumeracji
-    def visitEnum_declaration(self, ctx):
-        enum_name = ctx.IDENTIFIER().getText()
-        enum_constants = ', '.join([identifier.getText() for identifier in ctx.enum_body().IDENTIFIER()])
-        return f"{enum_name} = enum.Enum({enum_name}, {{{enum_constants}}})"
-
-    # Konwersja ciała metody
-    def visitMethod_body(self, ctx):
-        body = []
+    def visitBlock(self, ctx: javaToPythonParser.BlockContext):
+        body = ""
+        self.increase_indentation()
         for statement in ctx.statement():
-            result = self.visit(statement)
-            if isinstance(result, int):  # Sprawdź, czy wynik jest liczbą całkowitą
-                result = str(result)  # Jeśli tak, zamień na łańcuch znaków
-            body.append(result)
-        return '\n'.join(body)
+            visited_statement = self.visit(statement)
+            if visited_statement is not None:
+                body += self.get_indentation() + visited_statement + "\n"
+        self.decrease_indentation()
+        return body
 
-    # Konwersja instrukcji break
-    def visitBreak_statement(self, ctx):
-        return "break"
-
-        # Konwersja instrukcji continue
-
-    def visitContinue_statement(self, ctx):
-        return "continue"
-
-
-    # Konwersja bloku instrukcji
-    def visitBlock_statement(self, ctx):
+    def visitStatement(self, ctx: javaToPythonParser.StatementContext):
+        if ctx.print_statement():
+            return self.visit(ctx.print_statement())
+        # Other cases here
         return self.visitChildren(ctx)
 
-    # Konwersja pojedynczej instrukcji
-    def visitStatement(self, ctx):
-        if ctx.local_variable():
-            return self.visitLocal_variable(ctx.local_variable())
-        elif ctx.assignment():
-            return self.visitAssignment(ctx.assignment())
-        elif ctx.print_statement():
-            return self.visitPrint_statement(ctx.print_statement())
-        elif ctx.return_statement():
-            return self.visitReturn_statement(ctx.return_statement())
-        elif ctx.break_statement():
-            return self.visitBreak_statement(ctx.break_statement())
-        elif ctx.continue_statement():
-            return self.visitContinue_statement(ctx.continue_statement())
-        elif ctx.function_call():
-            return self.visitFunction_call(ctx.function_call())
-        # Add more statements here as needed
+    def visitPrint_statement(self, ctx: javaToPythonParser.Print_statementContext):
+        print_content = self.visit(ctx.print_term())
+        return f"print({print_content})"
+
+    def visitPrint_term(self, ctx: javaToPythonParser.Print_termContext):
+        if ctx.TEXT():
+            return ctx.TEXT().getText()
+        elif ctx.IDENTIFIER():
+            identifiers = [id.getText() for id in ctx.IDENTIFIER()]
+            if len(identifiers) > 1:
+                return ' + " " + '.join(identifiers)
+            else:
+                return identifiers[0]
+        elif ctx.expression():
+            return self.visit(ctx.expression())
         else:
             return ""
 
-    # Konwersja instrukcji drukowania
-    def visitPrint_statement(self, ctx):
-        expression = self.visit(ctx.print_term())
-        return f"print({expression})"
+    def visitExpression(self, ctx: javaToPythonParser.ExpressionContext):
+        # Handle expressions here
+        return ctx.getText()
 
-    # Konwersja instrukcji powrotu
-    def visitReturn_statement(self, ctx):
-        if ctx.IDENTIFIER():
-            return f"return {ctx.IDENTIFIER().getText()}"
-        elif ctx.literal():
-            return self.visitLiteral(ctx.literal())
-        else:
-            return "return"
+def convert_java_to_python(input_code):
+    input_stream = InputStream(input_code)
+    lexer = javaToPythonLexer(input_stream)
+    token_stream = CommonTokenStream(lexer)
+    parser = javaToPythonParser(token_stream)
+    tree = parser.start()
+    converter = JavaToPythonConverter()
+    converter.visit(tree)
+    return converter.output
 
-    # Konwersja instrukcji warunkowej if
-    def visitIf_statement(self, ctx):
-        condition = self.visit(ctx.expression())
-        block = self.visit(ctx.block())
-        else_statements = [self.visit(else_stmt) for else_stmt in ctx.else_statement()]
-        else_part = "" if len(else_statements) == 0 else f"else:\n{else_statements[-1]}"
-        return f"if {condition}:\n{block}\n{else_part}"
+java_code = """
+class MyClass {
+    int myField = 0;
+    void myMethod(int param1, String param2) {
+        System.out.println("Hello, world!");
+        System.out.println(param1 + " " + param2);
+    }
+}
+"""
 
-
-    # Konwersja instrukcji else
-    def visitElse_statement(self, ctx):
-        if ctx.if_statement():
-            return self.visit(ctx.if_statement())
-        else:
-            return self.visitChildren(ctx)
-
-    # Konwersja instrukcji switch-case
-    def visitSwitch_case_statement(self, ctx):
-        switch_variable = ctx.IDENTIFIER().getText()
-        switch_block = self.visit(ctx.switch_block())
-        return f"def switch_case({switch_variable}):\n{switch_block}"
-
-    def visitSwitch_block(self, ctx):
-        switch_cases = []
-        for switch_case in ctx.switch_case():
-            switch_cases.append(self.visit(switch_case))
-        default_case = self.visit(ctx.default_case()) if ctx.default_case() else ""
-        switch_cases.append(default_case)
-        return "\n".join(switch_cases)
-
-    def visitSwitch_case(self, ctx):
-        switch_variable = ctx.parentCtx.IDENTIFIER().getText()
-        case_value = ctx.getChild(1).getText()
-        case_block = "\n".join(self.visit(statement) for statement in ctx.statement())
-        return f"if {switch_variable} == {case_value}:\n{case_block}\n"
-
-    def visitDefault_case(self, ctx):
-        default_block = "\n".join(self.visit(statement) for statement in ctx.statement())
-        return default_block
-
-class Main:
-    def main(self, args):
-        input_stream = FileStream(args[0])
-        print(input_stream)
-        lexer = javaToPythonLexer(input_stream)
-        token_stream = CommonTokenStream(lexer)
-        parser = javaToPythonParser(token_stream)
-        tree = parser.start()
-
-        # Użycie konwertera
-        converter = JavaToPythonConverter()
-        python_code = converter.visit(tree)
-        print(python_code)
-
-if __name__ == "__main__":
-    Main().main(sys.argv[1:])
+python_code = convert_java_to_python(java_code)
+print(python_code)
