@@ -17,7 +17,7 @@ argument: literal | IDENTIFIER | function_call;
 declaration: access? (class_declaration | enum_declaration | interface_declaration);
 access: PUBLIC | PRIVATE | PROTECTED;
 
-class_declaration: CLASS IDENTIFIER (EXTENDS IDENTIFIER)? (IMPLEMENTS IDENTIFIER (COMMA IDENTIFIER)*)? LEFTBRACE class_body RIGHTBRACE;
+class_declaration: CLASS IDENTIFIER LEFTBRACE class_body RIGHTBRACE (EXTENDS IDENTIFIER)? (IMPLEMENTS IDENTIFIER (COMMA IDENTIFIER)*)?;
 class_body: (field_declaration | method_declaration | constructor | enum_declaration | interface_declaration)*;
 
 enum_declaration: ENUM IDENTIFIER LEFTBRACE enum_body RIGHTBRACE;
