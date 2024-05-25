@@ -43,7 +43,8 @@ statement: local_variable SEMICOLON
           | break_statement SEMICOLON
           | continue_statement SEMICOLON
           | function_call SEMICOLON
-          | increment_decrement SEMICOLON;
+          | increment_decrement SEMICOLON
+          | if_statement SEMICOLON; // Dodano if_statement
 
 block_statement: if_statement
                 | switch_case_statement
@@ -107,7 +108,9 @@ return_statement: RETURN (IDENTIFIER | literal | arithmetic_expression)?;
 break_statement: BREAK;
 continue_statement: CONTINUE;
 
-function_call: primary_expression (DOT IDENTIFIER LEFTPAREN argument_list? RIGHTPAREN)*;
+function_call: primary_expression (DOT IDENTIFIER LEFTPAREN argument_list? RIGHTPAREN)*
+             | method_invocation;
+method_invocation: primary_expression (DOT IDENTIFIER LEFTPAREN argument_list? RIGHTPAREN)*;
 
 primary_expression: IDENTIFIER | literal | THIS;
 

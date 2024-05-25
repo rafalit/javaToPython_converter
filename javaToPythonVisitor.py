@@ -304,6 +304,11 @@ class javaToPythonVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by javaToPythonParser#method_invocation.
+    def visitMethod_invocation(self, ctx:javaToPythonParser.Method_invocationContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by javaToPythonParser#primary_expression.
     def visitPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
         return self.visitChildren(ctx)

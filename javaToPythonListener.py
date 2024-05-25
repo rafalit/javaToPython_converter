@@ -539,6 +539,15 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by javaToPythonParser#method_invocation.
+    def enterMethod_invocation(self, ctx:javaToPythonParser.Method_invocationContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#method_invocation.
+    def exitMethod_invocation(self, ctx:javaToPythonParser.Method_invocationContext):
+        pass
+
+
     # Enter a parse tree produced by javaToPythonParser#primary_expression.
     def enterPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
         pass
