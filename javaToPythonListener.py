@@ -35,6 +35,24 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
+    # Enter a parse tree produced by javaToPythonParser#generic_type.
+    def enterGeneric_type(self, ctx:javaToPythonParser.Generic_typeContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#generic_type.
+    def exitGeneric_type(self, ctx:javaToPythonParser.Generic_typeContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#simple_type.
+    def enterSimple_type(self, ctx:javaToPythonParser.Simple_typeContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#simple_type.
+    def exitSimple_type(self, ctx:javaToPythonParser.Simple_typeContext):
+        pass
+
+
     # Enter a parse tree produced by javaToPythonParser#type.
     def enterType(self, ctx:javaToPythonParser.TypeContext):
         pass
@@ -113,6 +131,15 @@ class javaToPythonListener(ParseTreeListener):
 
     # Exit a parse tree produced by javaToPythonParser#class_declaration.
     def exitClass_declaration(self, ctx:javaToPythonParser.Class_declarationContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#generic_declaration.
+    def enterGeneric_declaration(self, ctx:javaToPythonParser.Generic_declarationContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#generic_declaration.
+    def exitGeneric_declaration(self, ctx:javaToPythonParser.Generic_declarationContext):
         pass
 
 
@@ -350,15 +377,6 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by javaToPythonParser#annotation.
-    def enterAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
-        pass
-
-    # Exit a parse tree produced by javaToPythonParser#annotation.
-    def exitAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
-        pass
-
-
     # Enter a parse tree produced by javaToPythonParser#if_statement.
     def enterIf_statement(self, ctx:javaToPythonParser.If_statementContext):
         pass
@@ -539,21 +557,30 @@ class javaToPythonListener(ParseTreeListener):
         pass
 
 
-    # Enter a parse tree produced by javaToPythonParser#method_invocation.
-    def enterMethod_invocation(self, ctx:javaToPythonParser.Method_invocationContext):
-        pass
-
-    # Exit a parse tree produced by javaToPythonParser#method_invocation.
-    def exitMethod_invocation(self, ctx:javaToPythonParser.Method_invocationContext):
-        pass
-
-
     # Enter a parse tree produced by javaToPythonParser#primary_expression.
     def enterPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
         pass
 
     # Exit a parse tree produced by javaToPythonParser#primary_expression.
     def exitPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#annotation.
+    def enterAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#annotation.
+    def exitAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
+        pass
+
+
+    # Enter a parse tree produced by javaToPythonParser#comment.
+    def enterComment(self, ctx:javaToPythonParser.CommentContext):
+        pass
+
+    # Exit a parse tree produced by javaToPythonParser#comment.
+    def exitComment(self, ctx:javaToPythonParser.CommentContext):
         pass
 
 

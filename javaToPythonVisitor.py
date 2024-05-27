@@ -24,6 +24,16 @@ class javaToPythonVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
+    # Visit a parse tree produced by javaToPythonParser#generic_type.
+    def visitGeneric_type(self, ctx:javaToPythonParser.Generic_typeContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by javaToPythonParser#simple_type.
+    def visitSimple_type(self, ctx:javaToPythonParser.Simple_typeContext):
+        return self.visitChildren(ctx)
+
+
     # Visit a parse tree produced by javaToPythonParser#type.
     def visitType(self, ctx:javaToPythonParser.TypeContext):
         return self.visitChildren(ctx)
@@ -66,6 +76,11 @@ class javaToPythonVisitor(ParseTreeVisitor):
 
     # Visit a parse tree produced by javaToPythonParser#class_declaration.
     def visitClass_declaration(self, ctx:javaToPythonParser.Class_declarationContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by javaToPythonParser#generic_declaration.
+    def visitGeneric_declaration(self, ctx:javaToPythonParser.Generic_declarationContext):
         return self.visitChildren(ctx)
 
 
@@ -199,11 +214,6 @@ class javaToPythonVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by javaToPythonParser#annotation.
-    def visitAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
-        return self.visitChildren(ctx)
-
-
     # Visit a parse tree produced by javaToPythonParser#if_statement.
     def visitIf_statement(self, ctx:javaToPythonParser.If_statementContext):
         return self.visitChildren(ctx)
@@ -304,13 +314,18 @@ class javaToPythonVisitor(ParseTreeVisitor):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by javaToPythonParser#method_invocation.
-    def visitMethod_invocation(self, ctx:javaToPythonParser.Method_invocationContext):
+    # Visit a parse tree produced by javaToPythonParser#primary_expression.
+    def visitPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
         return self.visitChildren(ctx)
 
 
-    # Visit a parse tree produced by javaToPythonParser#primary_expression.
-    def visitPrimary_expression(self, ctx:javaToPythonParser.Primary_expressionContext):
+    # Visit a parse tree produced by javaToPythonParser#annotation.
+    def visitAnnotation(self, ctx:javaToPythonParser.AnnotationContext):
+        return self.visitChildren(ctx)
+
+
+    # Visit a parse tree produced by javaToPythonParser#comment.
+    def visitComment(self, ctx:javaToPythonParser.CommentContext):
         return self.visitChildren(ctx)
 
 

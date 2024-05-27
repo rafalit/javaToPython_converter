@@ -1,19 +1,58 @@
-public class Animal {
-    public void sound() {
-        System.out.println("Animal makes a sound");
+public class Shape {
+    public double area() {
+        return 0.0;
     }
 }
 
-public class Dog extends Animal {
-    @Override
-    public void sound() {
-        System.out.println("Dog barks");
+public class Circle extends Shape {
+    private double radius;
+
+    public Circle(double radius) {
+        this.radius = radius;
+    }
+
+    public double area() {
+        return 3.14 * radius * radius;
+    }
+}
+
+public class Rectangle extends Shape {
+    private double width;
+    private double height;
+
+    public Rectangle(double width, double height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    public double area() {
+        return width * height;
+    }
+}
+
+public class Triangle extends Shape {
+    private double base;
+    private double height;
+
+    public Triangle(double base, double height) {
+        this.base = base;
+        this.height = height;
+    }
+
+    public double area() {
+        return 0.5 * base * height;
     }
 }
 
 public class Main {
     public static void main(String[] args) {
-        Animal myDog = new Dog();
-        myDog.sound();
+        Circle circle = new Circle(5);
+        System.out.println("Circle area: " + circle.area());
+
+        Rectangle rectangle = new Rectangle(4, 6);
+        System.out.println("Rectangle area: " + rectangle.area());
+
+        Triangle triangle = new Triangle(3, 7);
+        System.out.println("Triangle area: " + triangle.area());
     }
 }

@@ -1,3 +1,4 @@
+import os
 from antlr4 import *
 from javaToPythonLexer import javaToPythonLexer
 from javaToPythonParser import javaToPythonParser
@@ -25,25 +26,39 @@ class JavaToPythonConverter(javaToPythonVisitor):
     def generate_import_statements(self):
         return '\n'.join([f"import {module}" for module in self.imports])
 
+    def visitComment(self, ctx: javaToPythonParser.CommentContext):
+        comment_text = ctx.getText()
+        return self.convert_comment(comment_text)
+
+    def convert_comment(self, comment):
+        if comment.startswith("//"):
+            return comment.replace("//", "#") + "\n"
+        elif comment.startswith("/*") and comment.endswith("*/"):
+            lines = comment[2:-2].strip().split('\n')
+            return '\n'.join(["# " + line.strip() for line in lines]) + "\n"
+        else:
+            return ""
+
     def visitImport_statement(self, ctx: javaToPythonParser.Import_statementContext):
         import_tokens = [token.getText() for token in ctx.IDENTIFIER()]
         import_statement = '.'.join(import_tokens)
         self.add_import(import_statement)
 
     def visitData_type(self, ctx: javaToPythonParser.Data_typeContext):
-        token_type = ctx.start.type
-        if token_type == javaToPythonParser.INT:
-            return "int"
-        elif token_type == javaToPythonParser.FLOAT:
-            return "float"
-        elif token_type == javaToPythonParser.STRING:
-            return "str"
-        elif token_type == javaToPythonParser.BOOLEAN:
-            return "bool"
-        elif token_type == javaToPythonParser.IDENTIFIER:
-            return ctx.IDENTIFIER().getText()
+        if ctx.simple_type():
+            return ctx.simple_type().getText()
         else:
-            return ""
+            token_type = ctx.start.type
+            if token_type == javaToPythonParser.INT:
+                return "int"
+            elif token_type == javaToPythonParser.FLOAT:
+                return "float"
+            elif token_type == javaToPythonParser.STRING:
+                return "str"
+            elif token_type == javaToPythonParser.BOOLEAN:
+                return "bool"
+            else:
+                return ""
 
     def visitType(self, ctx: javaToPythonParser.TypeContext):
         if ctx.VOID():
@@ -179,36 +194,56 @@ class JavaToPythonConverter(javaToPythonVisitor):
         for statement in ctx.statement():
             visited_statement = self.visit(statement)
             if visited_statement is not None:
-                visited_statement = visited_statement.replace("if(", "if ")
                 body += self.get_indentation() + visited_statement.strip() + "\n"
+        for block_statement in ctx.block_statement():
+            visited_statement = self.visit(block_statement)
+            if visited_statement is not None:
+                body += self.get_indentation() + visited_statement.strip() + "\n"
+        for child in ctx.children:
+            if isinstance(child, javaToPythonParser.CommentContext):  # Added comment handling
+                body += self.get_indentation() + self.visit(child)
         self.decrease_indentation()
         return body
 
     def visitStatement(self, ctx: javaToPythonParser.StatementContext):
-        if ctx.print_statement():
+        if ctx.local_variable():
+            return self.visit(ctx.local_variable())
+        elif ctx.assignment():
+            return self.visit(ctx.assignment())
+        elif ctx.print_statement():
             return self.visit(ctx.print_statement())
+        elif ctx.return_statement():
+            return self.visit(ctx.return_statement())
+        elif ctx.break_statement():
+            return "break"
+        elif ctx.continue_statement():
+            return "continue"
+        elif ctx.function_call():
+            return self.visit(ctx.function_call())
+        elif ctx.increment_decrement():
+            return self.visit(ctx.increment_decrement())
         elif ctx.if_statement():
             return self.visit(ctx.if_statement())
         elif ctx.for_statement():
             return self.visit(ctx.for_statement())
         elif ctx.while_statement():
             return self.visit(ctx.while_statement())
-        elif ctx.return_statement():
-            return self.visit(ctx.return_statement())
-        # Handle other statement types
-        return self.visitChildren(ctx)
+        # Add other statement types if needed
+        else:
+            return self.visitChildren(ctx)
 
     def visitBlock_statement(self, ctx: javaToPythonParser.Block_statementContext):
-        if ctx.if_statement():
-            return self.visit(ctx.if_statement())
-        elif ctx.switch_case_statement():
-            return self.visit(ctx.switch_case_statement())
-        elif ctx.loop_statement():
-            return self.visit(ctx.loop_statement())
-        elif ctx.try_catch_statement():
-            return self.visit(ctx.try_catch_statement())
-        else:
-            return ""
+        statements = []
+        for child in ctx.children:
+            if isinstance(child, javaToPythonParser.StatementContext):
+                statement = self.visit(child)
+                if statement:
+                    statements.append(statement)
+            elif isinstance(child, javaToPythonParser.CommentContext):  # Dodaj obsługę komentarzy
+                comment = self.visit(child)
+                if comment:
+                    statements.append(comment)
+        return '\n'.join(statements)
 
     def visitLocal_variable(self, ctx: javaToPythonParser.Local_variableContext):
         data_type = self.visit(ctx.data_type())
@@ -224,9 +259,6 @@ class JavaToPythonConverter(javaToPythonVisitor):
         return f"{data_type} {' '.join(variables)}"
 
     def visitAssignment(self, ctx: javaToPythonParser.AssignmentContext):
-        data_type = ""
-        if ctx.data_type() is not None:
-            data_type = self.visit(ctx.data_type()) + " "
         this_prefix = ""
         if ctx.THIS() is not None:
             this_prefix = "self."
@@ -246,20 +278,23 @@ class JavaToPythonConverter(javaToPythonVisitor):
             value = self.visit(ctx.class_object())
         elif ctx.enum_object() is not None:
             value = self.visit(ctx.enum_object())
-        return f"{data_type}{this_prefix}{identifier} {assign_operator} {value}"
+        return f"{this_prefix}{identifier} {assign_operator} {value}"
 
     def visitIncrement_decrement(self, ctx: javaToPythonParser.Increment_decrementContext):
         identifier = ctx.IDENTIFIER().getText()
         operator = ctx.INCREMENT().getText() if ctx.INCREMENT() is not None else ctx.DECREMENT().getText()
-        return f"{identifier}{operator}"
-
-    def visitExpression(self, ctx: javaToPythonParser.ExpressionContext):
-        if ctx.logical_expression():
-            return self.visit(ctx.logical_expression())
-        elif ctx.arithmetic_expression():
-            return self.visit(ctx.arithmetic_expression())
+        if operator == "++":
+            return f"{identifier} += 1"
+        elif operator == "--":
+            return f"{identifier} -= 1"
         else:
             return ""
+
+    def visitExpression(self, ctx: javaToPythonParser.ExpressionContext):
+        result = ""
+        for logical_expr in ctx.logical_expression():
+            result += self.visit(logical_expr)
+        return result
 
     def visitLogical_expression(self, ctx: javaToPythonParser.Logical_expressionContext):
         logical_terms = [self.visit(term) for term in ctx.logical_term()]
@@ -348,25 +383,32 @@ class JavaToPythonConverter(javaToPythonVisitor):
     def visitIf_statement(self, ctx: javaToPythonParser.If_statementContext):
         if_clause = self.visit(ctx.expression())
         if_block = self.visit(ctx.block())
-        else_clauses = [self.visit(else_ctx) for else_ctx in ctx.else_statement()]
-        result = f"if {if_clause}:\n{if_block}\n"
-        for else_clause in else_clauses:
-            result += f"else:\n{else_clause}\n"
-        return result
 
-    def visitElse_statement(self, ctx: javaToPythonParser.Else_statementContext):
-        else_clause = self.visit(ctx.if_statement())
-        return f"else:\n{else_clause}"
+        indentation = self.get_indentation()
+
+        else_clause = self.visit(ctx.else_statement()) if ctx.else_statement() else ""
+
+        result = f"{indentation}if {if_clause}:\n{if_block}\n"
+        if else_clause:
+            result += f"{indentation}else:\n{else_clause}\n"
+        return result
 
     def visitSwitch_case_statement(self, ctx: javaToPythonParser.Switch_case_statementContext):
         switch_expr = ctx.IDENTIFIER().getText()
-        switch_cases = [self.visitSwitch_case(case) for case in ctx.switch_case()]
-        return f"switch {switch_expr}:\n" + "\n".join(switch_cases)
+        switch_cases = [self.visitSwitch_case(case, switch_expr) for case in ctx.switch_case() if
+                        self.visitSwitch_case(case, switch_expr)]
+        return "\n".join(switch_cases)
 
-    def visitSwitch_case(self, ctx: javaToPythonParser.Switch_caseContext):
+    def visitSwitch_case(self, ctx: javaToPythonParser.Switch_caseContext, switch_expr):
         case_value = self.visit(ctx.literal()) if ctx.literal() else ctx.IDENTIFIER().getText()
-        case_statements = [self.visit(statement) for statement in ctx.statement()]
-        return f"case {case_value}:\n" + "\n".join(case_statements)
+        case_statements = [self.visit(statement) for statement in ctx.statement() if statement != "break"]
+        if not case_statements:  # Jeśli nie ma żadnych instrukcji, zwróć puste miejsce
+            return ""
+        indented_statements = "\n".join([f"    {statement}" for statement in case_statements])
+        if len(case_statements) > 1:
+            return f"        if {switch_expr} == {case_value}:\n{indented_statements}"
+        else:
+            return f"        elif {switch_expr} == {case_value}:\n{indented_statements}"
 
     def visitDefault_case(self, ctx: javaToPythonParser.Default_caseContext):
         case_statements = [self.visit(statement) for statement in ctx.statement()]
@@ -383,29 +425,32 @@ class JavaToPythonConverter(javaToPythonVisitor):
             return ""
 
     def visitFor_statement(self, ctx: javaToPythonParser.For_statementContext):
-        assignment = self.visit(ctx.assignment())
+        initialization = self.visit(ctx.assignment())
         condition = self.visit(ctx.for_condition())
         iteration = self.visit(ctx.for_iteration())
         block = self.visit(ctx.block())
-        return f"for {assignment}; {condition}; {iteration}:\n{block}"
+
+        # Przekształcamy warunki na elementy range()
+        init_var, init_value = initialization.split('= ')
+        init_var = init_var[0]
+        condition_var, condition_op, condition_value = condition.split(' ')
+        iter_var, iter_op = iteration.split(' ')
+
+        start = init_value
+        stop = condition_value
+        step = '1' if iter_op == '++' else '-1'
+
+        return f"for {init_var} in range({start}, {stop}, {step}):\n{block}"
 
     def visitFor_condition(self, ctx: javaToPythonParser.For_conditionContext):
         identifier1 = ctx.IDENTIFIER(0).getText()
         operator = self.visit(ctx.compare_operator())
-        identifier2 = ctx.IDENTIFIER(1).getText() if ctx.IDENTIFIER(1) else ""
-        number = ctx.NUMBER().getText() if ctx.NUMBER() else ""
-
-        if identifier2:
-            return f"{identifier1} {operator} {identifier2}"
-        elif number:
-            return f"{identifier1} {operator} {number}"
-        else:
-            return f"{identifier1} {operator}"
+        number = ctx.NUMBER().getText()
+        return f"{identifier1} {operator} {number}"
 
     def visitFor_iteration(self, ctx: javaToPythonParser.For_iterationContext):
         identifier = ctx.IDENTIFIER().getText()
         iteration = ctx.INCREMENT().getText() if ctx.INCREMENT() else ctx.DECREMENT().getText()
-
         return f"{identifier} {iteration}"
 
     def visitWhile_statement(self, ctx: javaToPythonParser.While_statementContext):
@@ -431,11 +476,11 @@ class JavaToPythonConverter(javaToPythonVisitor):
 
     def visitDo_while_statement(self, ctx: javaToPythonParser.Do_while_statementContext):
         result = ""
-        result += "do {\n"
+        result += "do:\n"
         result += self.visit(ctx.block())
-        result += "} while ("
+        result += "while ("
         result += self.visit(ctx.while_condition())
-        result += ");\n"
+        result += "\n"
         return result
 
     def visitTry_catch_statement(self, ctx: javaToPythonParser.Try_catch_statementContext):
@@ -461,16 +506,9 @@ class JavaToPythonConverter(javaToPythonVisitor):
     def visitPrint_term(self, ctx: javaToPythonParser.Print_termContext):
         if ctx.TEXT():
             return ctx.TEXT().getText()
-        elif ctx.IDENTIFIER():
-            identifiers = [id.getText() for id in ctx.IDENTIFIER()]
-            return ' + '.join(identifiers)
-        elif ctx.expression():
-            expression = self.visit(ctx.expression())
-            identifiers = [id for id in ctx.IDENTIFIER()]
-            if identifiers:
-                return f'f"{expression}"'
-            else:
-                return expression
+        elif ctx.primary_expression():
+            primary_expressions = [self.visit(expr) for expr in ctx.primary_expression()]
+            return ' + '.join(primary_expressions)
         else:
             return ""
 
@@ -504,14 +542,16 @@ class JavaToPythonConverter(javaToPythonVisitor):
             result += ")"
         return result
 
-    def visitMethod_invocation(self, ctx: javaToPythonParser.Method_invocationContext):
-        method_name = ctx.IDENTIFIER().getText()
-        arguments = self.visit(ctx.argument_list())
-        return f"{method_name}({arguments})"
+    #def visitMethod_invocation(self, ctx: javaToPythonParser.Method_invocationContext):
+     #   method_name = ctx.IDENTIFIER().getText()
+      #  arguments = self.visit(ctx.argument_list())
+      #  return f"{method_name}({arguments})"
 
     def visitPrimary_expression(self, ctx: javaToPythonParser.Primary_expressionContext):
         if ctx.IDENTIFIER():
-            return ctx.IDENTIFIER().getText()
+            # If there are multiple identifiers, concatenate their text
+            identifiers = [identifier.getText() for identifier in ctx.IDENTIFIER()]
+            return ''.join(identifiers)
         elif ctx.literal():
             return self.visitLiteral(ctx.literal())
         elif ctx.THIS():
@@ -520,32 +560,33 @@ class JavaToPythonConverter(javaToPythonVisitor):
             return ""
 
 
-def convert_java_to_python(input_code):
+def convert_java_to_python(input_file):
     converter = JavaToPythonConverter()
-    input_stream = InputStream(input_code)
+
+    # Read Java code from the input file
+    with open(input_file, 'r') as file:
+        java_code = file.read()
+
+    input_stream = InputStream(java_code)
     lexer = javaToPythonLexer(input_stream)
     token_stream = CommonTokenStream(lexer)
     parser = javaToPythonParser(token_stream)
     tree = parser.start()
     converter.visit(tree)
     import_statements = converter.generate_import_statements()
-    return f"{import_statements}\n{converter.output}"
+    python_code = f"{import_statements}\n{converter.output}"
 
-java_code = """
-import java;
-public class Test {
-    float a = 5;
-    float b = 8;
-    public static void main(String[] args) {
-        System.out.println(a);
-        System.out.println(b);
-        System.out.println(a+b);
-        for(int i=0; i<4; i--){
-            System.out.println(i);
-        }
-    }
-}
-"""
+    # Prepare the output file name
+    file_name, _ = os.path.splitext(input_file)
+    output_file = f"conversions/{file_name.split('/')[-1]}.py"
 
-python_code = convert_java_to_python(java_code)
-print(python_code)
+    # Write the Python code to the output file
+    with open(output_file, 'w') as file:
+        file.write(python_code)
+
+    print(f"Conversion successful. Python code saved to '{output_file}'")
+
+
+# Example usage
+java_file = "conversions/for_loop.txt"
+convert_java_to_python(java_file)
