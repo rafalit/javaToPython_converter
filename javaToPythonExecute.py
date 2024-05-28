@@ -39,6 +39,19 @@ class JavaToPythonConverter(javaToPythonVisitor):
         else:
             return ""
 
+    def visitChildren(self, ctx):
+        for child in ctx.getChildren():
+            if isinstance(child, javaToPythonParser.CommentContext):
+                self.output += self.convert_comment(child.getText())
+            else:
+                self.output += self.visit(child) if child is not None else ""
+
+    def visitStart(self, ctx: javaToPythonParser.StartContext):
+        for child in ctx.getChildren():
+            if isinstance(child, javaToPythonParser.CommentContext):
+                self.output += self.convert_comment(child.getText())
+            else:
+                self.visit(child)
     def visitImport_statement(self, ctx: javaToPythonParser.Import_statementContext):
         import_tokens = [token.getText() for token in ctx.IDENTIFIER()]
         import_statement = '.'.join(import_tokens)
@@ -588,5 +601,5 @@ def convert_java_to_python(input_file):
 
 
 # Example usage
-java_file = "conversions/for_loop.txt"
+java_file = "conversions/comment.txt"
 convert_java_to_python(java_file)
