@@ -1,9 +1,10 @@
+import tkinter as tk
+from tkinter import filedialog, Text
 import os
 from antlr4 import *
 from javaToPythonLexer import javaToPythonLexer
 from javaToPythonParser import javaToPythonParser
 from javaToPythonVisitor import javaToPythonVisitor
-
 
 class JavaToPythonConverter(javaToPythonVisitor):
     def __init__(self):
@@ -572,34 +573,88 @@ class JavaToPythonConverter(javaToPythonVisitor):
         else:
             return ""
 
+from antlr4.error.ErrorListener import ErrorListener
 
-def convert_java_to_python(input_file):
+class CustomErrorListener(ErrorListener):
+    def __init__(self, errors):
+        super(CustomErrorListener, self).__init__()
+        self.errors = errors
+
+    def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
+        self.errors.append(f"Syntax error at line {line}, column {column}: {msg}")
+
+
+def convert_java_to_python(java_code):
     converter = JavaToPythonConverter()
-
-    # Read Java code from the input file
-    with open(input_file, 'r') as file:
-        java_code = file.read()
-
     input_stream = InputStream(java_code)
     lexer = javaToPythonLexer(input_stream)
     token_stream = CommonTokenStream(lexer)
     parser = javaToPythonParser(token_stream)
-    tree = parser.start()
-    converter.visit(tree)
+
+    errors = []
+
+    # Add custom error listener
+    error_listener = CustomErrorListener(errors)
+    parser.removeErrorListeners()
+    parser.addErrorListener(error_listener)
+
+    try:
+        tree = parser.start()
+        converter.visit(tree)
+    except Exception as e:
+        errors.append(str(e))
+
     import_statements = converter.generate_import_statements()
     python_code = f"{import_statements}\n{converter.output}"
 
-    # Prepare the output file name
-    file_name, _ = os.path.splitext(input_file)
-    output_file = f"conversions/{file_name.split('/')[-1]}.py"
+    return python_code, errors
 
-    # Write the Python code to the output file
-    with open(output_file, 'w') as file:
-        file.write(python_code)
+class Application(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("Java to Python Converter")
+        self.geometry("1200x600")
 
-    print(f"Conversion successful. Python code saved to '{output_file}'")
+        self.create_widgets()
 
+    def create_widgets(self):
+        self.java_text = Text(self, wrap=tk.WORD)
+        self.java_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-# Example usage
-java_file = "conversions/if_condition.java  "
-convert_java_to_python(java_file)
+        self.python_text = Text(self, wrap=tk.WORD)
+        self.python_text.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+        self.button_frame = tk.Frame(self)
+        self.button_frame.pack(side=tk.TOP, pady=10)
+
+        self.open_button = tk.Button(self.button_frame, text="Open Java File", command=self.open_file)
+        self.open_button.pack(side=tk.LEFT, padx=5)
+
+        self.convert_button = tk.Button(self.button_frame, text="Convert to Python", command=self.convert)
+        self.convert_button.pack(side=tk.LEFT, padx=5)
+
+        self.error_text = Text(self, wrap=tk.WORD, height=10, fg="red")
+        self.error_text.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+    def open_file(self):
+        file_path = filedialog.askopenfilename(defaultextension=".java", filetypes=[("Java files", "*.java")])
+        if file_path:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                java_code = file.read()
+            self.java_text.delete(1.0, tk.END)
+            self.java_text.insert(tk.END, java_code)
+            self.python_text.delete(1.0, tk.END)
+            self.error_text.delete(1.0, tk.END)
+
+    def convert(self):
+        java_code = self.java_text.get(1.0, tk.END)
+        python_code, errors = convert_java_to_python(java_code)
+        self.python_text.delete(1.0, tk.END)
+        self.python_text.insert(tk.END, python_code)
+        self.error_text.delete(1.0, tk.END)
+        if errors:
+            self.error_text.insert(tk.END, "\n".join(errors))
+
+if __name__ == "__main__":
+    app = Application()
+    app.mainloop()
