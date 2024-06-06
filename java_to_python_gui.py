@@ -58,13 +58,10 @@ class JavaToPythonConverter(javaToPythonVisitor):
             else:
                 self.visit(child)
 
-
     def visitIf_statement(self, ctx: javaToPythonParser.If_statementContext):
         if_clause = self.visit(ctx.expression())
         if_block = self.visit(ctx.block())
         else_clause = self.visit(ctx.else_statement()) if ctx.else_statement() else ""
-
-
         indentation = self.get_indentation()
         result = f"{indentation}if {if_clause}:\n{if_block}"
         if else_clause:
@@ -271,7 +268,7 @@ class JavaToPythonConverter(javaToPythonVisitor):
                 statement = self.visit(child)
                 if statement:
                     statements.append(statement)
-            elif isinstance(child, javaToPythonParser.CommentContext):  # Dodaj obsługę komentarzy
+            elif isinstance(child, javaToPythonParser.CommentContext):  # Added comment handling
                 comment = self.visit(child)
                 if comment:
                     statements.append(comment)
@@ -334,16 +331,16 @@ class JavaToPythonConverter(javaToPythonVisitor):
         result = logical_terms[0]
         for i in range(len(logical_operators)):
             if logical_operators[i] == 'and':
-                result = result and logical_terms[i + 1]
+                result = f"{result} and {logical_terms[i + 1]}"
             elif logical_operators[i] == 'or':
-                result = result or logical_terms[i + 1]
+                result = f"{result} or {logical_terms[i + 1]}"
         return result
 
     def visitLogical_term(self, ctx: javaToPythonParser.Logical_termContext):
         if ctx.NOT():
-            return not self.visit(ctx.getChild(1))
+            return f"not {self.visit(ctx.getChild(1))}"
         elif ctx.LEFTPAREN():
-            return self.visit(ctx.logical_expression())
+            return f"({self.visit(ctx.logical_expression())})"
         elif ctx.IDENTIFIER():
             return ctx.IDENTIFIER().getText()
         elif ctx.literal():
@@ -421,7 +418,7 @@ class JavaToPythonConverter(javaToPythonVisitor):
     def visitSwitch_case(self, ctx: javaToPythonParser.Switch_caseContext, switch_expr):
         case_value = self.visit(ctx.literal()) if ctx.literal() else ctx.IDENTIFIER().getText()
         case_statements = [self.visit(statement) for statement in ctx.statement() if statement != "break"]
-        if not case_statements:  # Jeśli nie ma żadnych instrukcji, zwróć puste miejsce
+        if not case_statements:
             return ""
         indented_statements = "\n".join([f"    {statement}" for statement in case_statements])
         if len(case_statements) > 1:
@@ -449,38 +446,45 @@ class JavaToPythonConverter(javaToPythonVisitor):
         iteration = self.visit(ctx.for_iteration())
         block = self.visit(ctx.block())
 
-        # Przekształcamy warunki na elementy range()
-        init_var, init_value = initialization.split('= ')
-        init_var = init_var.strip()
-        condition_var, condition_op, condition_value = condition.split(' ')
-        iter_var, iter_op = iteration.split(' ')
+        init_var, init_value = initialization.split('=')
+        condition_var, condition_op, condition_value = condition.split()
+        iter_var, iter_op = iteration.split()
 
-        start = init_value
-        stop = condition_value
-        step = '1' if iter_op == '++' else '-1'
+        init_var, init_value = init_var.strip(), init_value.strip()
+        condition_value = condition_value.strip()
 
-        return f"for {init_var} in range({start}, {stop}, {step}):\n{block}"
+        if iter_op == '++':
+            step = '1'
+        elif iter_op == '--':
+            step = '-1'
+        else:
+            step = '1'
+
+        loop_code = f"{self.get_indentation()}for {init_var} in range({init_value}, {condition_value}, {step}):\n"
+        loop_code += block
+        return loop_code
 
     def visitFor_condition(self, ctx: javaToPythonParser.For_conditionContext):
-        identifier1 = ctx.IDENTIFIER(0).getText()
+        condition_var = ctx.IDENTIFIER(0).getText()
         operator = self.visit(ctx.compare_operator())
-        number = ctx.NUMBER().getText()
-        return f"{identifier1} {operator} {number}"
+        value = ctx.NUMBER().getText()
+        return f"{condition_var} {operator} {value}"
 
     def visitFor_iteration(self, ctx: javaToPythonParser.For_iterationContext):
         identifier = ctx.IDENTIFIER().getText()
-        iteration = ctx.INCREMENT().getText() if ctx.INCREMENT() else ctx.DECREMENT().getText()
-        return f"{identifier} {iteration}"
+        if ctx.INCREMENT():
+            return f"{identifier} ++"
+        elif ctx.DECREMENT():
+            return f"{identifier} --"
+        return ""
 
     def visitWhile_statement(self, ctx: javaToPythonParser.While_statementContext):
         condition = self.visit(ctx.while_condition())
         block = self.visit(ctx.block())
-        return f"while {condition}:\n{block}"
+        return f"{self.get_indentation()}while {condition}:\n{block}"
 
     def visitWhile_condition(self, ctx: javaToPythonParser.While_conditionContext):
-        if ctx.for_condition():
-            return self.visit(ctx.for_condition())
-        elif ctx.expression():
+        if ctx.expression():
             return self.visit(ctx.expression())
         elif ctx.IDENTIFIER():
             return ctx.IDENTIFIER().getText()
@@ -563,7 +567,6 @@ class JavaToPythonConverter(javaToPythonVisitor):
 
     def visitPrimary_expression(self, ctx: javaToPythonParser.Primary_expressionContext):
         if ctx.IDENTIFIER():
-            # If there are multiple identifiers, concatenate their text
             identifiers = [identifier.getText() for identifier in ctx.IDENTIFIER()]
             return ''.join(identifiers)
         elif ctx.literal():
@@ -581,8 +584,7 @@ class CustomErrorListener(ErrorListener):
         self.errors = errors
 
     def syntaxError(self, recognizer, offendingSymbol, line, column, msg, e):
-        self.errors.append(f"Syntax error at line {line}, column {column}: {msg}")
-
+        self.errors.append((line, column, msg))
 
 def convert_java_to_python(java_code):
     converter = JavaToPythonConverter()
@@ -593,7 +595,6 @@ def convert_java_to_python(java_code):
 
     errors = []
 
-    # Add custom error listener
     error_listener = CustomErrorListener(errors)
     parser.removeErrorListeners()
     parser.addErrorListener(error_listener)
@@ -652,8 +653,22 @@ class Application(tk.Tk):
         self.python_text.delete(1.0, tk.END)
         self.python_text.insert(tk.END, python_code)
         self.error_text.delete(1.0, tk.END)
+        self.java_text.tag_remove('error', '1.0', tk.END)
+
         if errors:
-            self.error_text.insert(tk.END, "\n".join(errors))
+            for error in errors:
+                if isinstance(error, tuple):
+                    line, column, msg = error
+                    self.error_text.insert(tk.END, f"Line {line}, Column {column}: {msg}\n")
+                    self.highlight_error(line)
+                else:
+                    self.error_text.insert(tk.END, error + "\n")
+
+    def highlight_error(self, line):
+        start = f"{line}.0"
+        end = f"{line}.end"
+        self.java_text.tag_add('error', start, end)
+        self.java_text.tag_config('error', background='yellow', foreground='red')
 
 if __name__ == "__main__":
     app = Application()
